@@ -1,5 +1,6 @@
 const { Schema, models, model } = require('mongoose');
 const { createHmac, randomBytes } = require('crypto');
+const { createUserTokenForAuthentication } = require('../services/authentication');
 
 const userSchema = new Schema({
     fullName: {
@@ -13,7 +14,6 @@ const userSchema = new Schema({
     },
     salt: {
         type: String,
-        required: true,
     },
     password: {
         type: String,
@@ -28,16 +28,16 @@ const userSchema = new Schema({
         enum: ['User', 'Admin'],
         default: "User",
     }
-}, { timestamps: true }); // Changed timeseries to timestamps for tracking createdAt and updatedAt
+}, { timestamps: true });
 
 userSchema.pre("save", function (next) {
     const user = this;
 
     if (!user.isModified('password')) {
-        return next();  // Ensure next() is called even if password is not modified
+        return next(); 
     }
 
-    const salt = randomBytes(16).toString('hex'); // Specify 'hex' encoding for consistent output
+    const salt = randomBytes(16).toString('hex');
     const hashedPassword = createHmac('sha256', salt).update(user.password).digest("hex");
 
     this.salt = salt;
@@ -46,6 +46,21 @@ userSchema.pre("save", function (next) {
     next();
 });
 
-const User = model("User", userSchema);  // Capitalize the model name to follow convention
+userSchema.static('matchPasswordAndGenerateToken',async function (email,password){
+    const user = await this.findOne({email});
+    if(!user) throw new Error('User not found !');
+
+    const salt=user.salt;
+    const hashedPassword=user.password;
+
+    const userProvidedPassword=createHmac('sha256', salt).update(password).digest("hex");
+
+    if(hashedPassword!== userProvidedPassword) throw new Error("Incorrect Password");
+
+    const token=createUserTokenForAuthentication(user);
+    return token;
+});
+
+const User = model("User", userSchema);
 
 module.exports = User;
