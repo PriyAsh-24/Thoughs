@@ -10,12 +10,7 @@ const blogRoute=require('./routes/blog');
 const { authCheck } = require('./middleware/authentication');
 const Blog=require('./models/blogs');
 
-mongoose.connect(process.env.MONGO_URL,{
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    socketTimeoutMS: 30000,  // 30 seconds
-    connectTimeoutMS: 30000, // 30 seconds
-}).then((e) => console.log("MongoDB Connected"));
+mongoose.connect(process.env.MONGO_URL).then((e) => console.log("MongoDB Connected"));
 const app=express();
 const PORT=process.env.PORT;
 
